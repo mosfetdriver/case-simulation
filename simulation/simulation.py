@@ -1,8 +1,6 @@
-import cvxpy
 import powercomponents
+import cplex
+import pandas as pd
 
-cp1 = powercomponents.ChargePoint(22, 3, 4, False)
-ev1 = powercomponents.ElectricVehicle("Kia", "Niro", 60, 55)
+profiles = pd.read_excel('C:/Users/cmsan/OneDrive/Documents/GitHub/case-simulation/simulation/data.xlsx')
 
-print(cp1)
-print(ev1)
