@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-profiles = pd.read_excel('C:/Users/cmsan/OneDrive/Documents/GitHub/case-simulation/simulation/data.xlsx')
+profiles = pd.read_excel('data.xlsx')
 results = pd.DataFrame()
 
 profiles.rename(columns = {'Fecha/Hora' : 'Timestamp', 'glb (W/m2)' : 'Irradiance', 'Carga (pu)' : 'Load'}, inplace = True)
@@ -13,13 +13,13 @@ mdl = Model("EV Charging Station")
 
 Ce = 150 # [CLP/kWh]
 
-weight = 0.001
+weight = 0 #0.001
 
-ev_dem = [40, 30, 50, 60]      # [kWh]
+ev_dem = [40, 30, 50, 100]      # [kWh]
 ev_ch = [0, 0, 0, 0]           # [kWh]
-ev_stay_time = [6, 4, 8, 10]   # [hrs.]
-ev_status = [0, 0, 0, 0]       # [CONNECTED]
-Pch_k_1 = [0, 0, 0, 0]         # [kW]
+# ev_stay_time = [6, 4, 8, 10]   # [hrs.]
+# ev_status = [0, 0, 0, 0]       # [CONNECTED]
+# Pch_k_1 = [0, 0, 0, 0]         # [kW]
 
 ev0 = []
 ev1 = []
@@ -37,11 +37,6 @@ Pl = profiles['Load'].tolist()
 Pmax = 80.0
 Pchmax = 22.0
 
-Pcs        = mdl.continuous_var(name = "Pcs")
-Pch1       = mdl.continuous_var(name = "Pch1")
-Pch2       = mdl.continuous_var(name = "Pch2")
-Pch3       = mdl.continuous_var(name = "Pch3")
-Pch4       = mdl.continuous_var(name = "Pch4")
 
 #cp1_status = mdl.binary_var(name = "cp1_status")
 #cp2_status = mdl.binary_var(name = "cp2_status")
@@ -49,7 +44,18 @@ Pch4       = mdl.continuous_var(name = "Pch4")
 #cp4_status = mdl.binary_var(name = "cp4_status")
 
 for i in range(24):
-    mdl.minimize(weight * Ce * (Pcs + Pl[i]) + ev0_stay[i]*(ev_dem[0] - (Pch1 + ev_ch[0]))**2 + ev1_stay[i]*(ev_dem[1] - (Pch2 + ev_ch[1]))**2 + ev2_stay[i]*(ev_dem[2] - (Pch3 + ev_ch[2]))**2 + ev3_stay[i]*(ev_dem[3] - (Pch4 + ev_ch[3]))**2)
+    Pcs        = mdl.continuous_var(name = "Pcs")
+    Pch1       = mdl.continuous_var(name = "Pch1")
+    Pch2       = mdl.continuous_var(name = "Pch2")
+    Pch3       = mdl.continuous_var(name = "Pch3")
+    Pch4       = mdl.continuous_var(name = "Pch4")
+    
+    mdl.minimize(weight * Ce * (Pcs + Pl[i]) \
+        + ev0_stay[i]*(ev_dem[0] - (Pch1 + ev_ch[0]))**2 \
+        + ev1_stay[i]*(ev_dem[1] - (Pch2 + ev_ch[1]))**2 \
+        + ev2_stay[i]*(ev_dem[2] - (Pch3 + ev_ch[2]))**2 \
+        + ev3_stay[i]*(ev_dem[3] - (Pch4 + ev_ch[3]))**2 \
+        )
 
     mdl.add_constraint(Pcs == Pch1 + Pch2 + Pch3 + Pch4)
     mdl.add_constraint(Pch1 <= Pchmax)
@@ -62,9 +68,21 @@ for i in range(24):
     mdl.add_constraint(Pch4 >= 0)
     mdl.add_constraint(Pcs + Pl[i] <= Pmax)
 
-    print(profiles['Load'][i])
+
+    # print(profiles['Load'][i])
 
     sol = mdl.solve()
+    print("*******")
+    print("h =", i)
+    print("Pch1 =", sol[Pch1])
+    print("Pch2 =", sol[Pch2])
+    print("Pch3 =", sol[Pch3])
+    print("Pch4 =", sol[Pch4])
+    print("Pl =", Pl[i])
+    print("Pcs =", sol[Pcs])
+    print("ev_ch =", ev_ch[3])
+    print("Pmax =", Pmax)
+    print("obj =", sol.objective_value)
 #    if sol:
     ev0.append(sol[Pch1])
     ev1.append(sol[Pch2])
@@ -77,6 +95,7 @@ for i in range(24):
     ev_ch[3] += sol[Pch4]
 
 
+print(ev_dem)
 print(ev_ch)
 
 #if sol:
