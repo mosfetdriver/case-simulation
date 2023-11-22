@@ -25,7 +25,7 @@ Pmax = 80.0
 Pchmax = 22.0
 
 # Se crean dos listas que contienen la demanda de energía y otra que almacena la carga hasta el tiempo t
-ev_dem = [50, 40, 70, 100]      # [kWh]
+ev_dem = [60, 50, 80, 150]      # [kWh]
 ev_ch = [0, 0, 0, 0]           # [kWh]
 
 # En estas listas se almacena la energía cargada en cada instante de tiempo
@@ -40,6 +40,16 @@ ev1_stay = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ev2_stay = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
 ev3_stay = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 
+# Se definen las horas de llegada y de salida de los vehículos eléctricos a la estación de carga
+ev0_arr_time = 6
+ev0_dep_time = 11 
+ev1_arr_time = 8
+ev1_dep_time = 11 
+ev2_arr_time = 10
+ev2_dep_time = 17
+ev3_arr_time = 14
+ev3_dep_time = 23 
+
 # Se transforma el perfil de carga del edificio a una lista
 Pl = profiles['Load'].tolist()
 
@@ -51,20 +61,22 @@ for i in range(24):
     Pch4       = mdl.continuous_var(name = "Pch4")
     
     mdl.minimize(weight * Ce * (Pch1 + Pch2 + Pch3 + Pch4 + Pl[i]) \
-        + ev0_stay[i]*(ev_dem[0] - (Pch1 + ev_ch[0]))**2 \
-        + ev1_stay[i]*(ev_dem[1] - (Pch2 + ev_ch[1]))**2 \
-        + ev2_stay[i]*(ev_dem[2] - (Pch3 + ev_ch[2]))**2 \
-        + ev3_stay[i]*(ev_dem[3] - (Pch4 + ev_ch[3]))**2 \
+        + (ev0_dep_time - i) * ev0_stay[i] * (ev_dem[0] - (Pch1 + ev_ch[0]))**2 \
+        + (ev1_dep_time - i) * ev1_stay[i] * (ev_dem[1] - (Pch2 + ev_ch[1]))**2 \
+        + (ev2_dep_time - i) * ev2_stay[i] * (ev_dem[2] - (Pch3 + ev_ch[2]))**2 \
+        + (ev3_dep_time - i) * ev3_stay[i] * (ev_dem[3] - (Pch4 + ev_ch[3]))**2 \
         )
 
     mdl.add_constraint(Pch1 <= Pchmax)
     mdl.add_constraint(Pch2 <= Pchmax)
     mdl.add_constraint(Pch3 <= Pchmax)
     mdl.add_constraint(Pch4 <= Pchmax)
+
     mdl.add_constraint(Pch1 >= 0)
     mdl.add_constraint(Pch2 >= 0)
     mdl.add_constraint(Pch3 >= 0)
     mdl.add_constraint(Pch4 >= 0)
+    
     mdl.add_constraint(Pch1 + Pch2 + Pch3 + Pch4 + Pl[i] <= Pmax)
 
 
@@ -95,4 +107,28 @@ for i in range(24):
 print(ev_dem)
 print(ev_ch)
 
-#
+# Se obtiene la potencia de la estación de carga y de la combinación entre el edificio y la estación de carga
+Pcs = []
+PcsPl = []
+x = []
+for i in range(24):
+    Pcs.append(ev0[i] + ev1[i] + ev2[i] + ev3[i])
+    PcsPl.append(Pcs[i] + Pl[i])
+    x.append(i)
+
+# Se grafican los resultados de simulación obtenidos para los vehículos eléctricos
+plt.title('Potencia de carga de los vehículos eléctricos')
+plt.axhline(y=22, color = 'r', linestyle = '--')
+plt.step(x, ev0)
+plt.step(x, ev1)
+plt.step(x, ev2)
+plt.step(x, ev3)
+plt.show()
+
+# Se grafican los resultados obtenidos para la saturación del empalme
+plt.title('Potencia de la EC, del Edificio y del Empalme')
+plt.axhline(y=80, color = 'r', linestyle = '--')
+plt.step(x, PcsPl)
+plt.step(x, Pcs)
+plt.step(x, Pl)
+plt.show()
