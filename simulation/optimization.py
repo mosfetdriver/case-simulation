@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import traci
 
 # Se importa el perfil de carga del edificio y la generación fotovoltaica
-profiles = pd.read_excel('data/data.xlsx')
+profiles = pd.read_excel('C:/Users/karla/OneDrive/Documentos/GitHub/case-simulation/datos_interpolados.xlsx')
 results = pd.DataFrame()
 
 # Se cambian los nombres a las columnas del dataframe para mayor legibilidad
