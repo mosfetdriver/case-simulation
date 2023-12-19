@@ -1,0 +1,9 @@
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="osm.net.xml.gz" />
+        <route-files value="vehicles_pru.rou.xml" />
+        <additional-files value="charging_station.add.xml C:/Users/karla/Sumo/2023-11-23-08-18-39/charging_station.add.xml" />
+    </input>
+
+</configuration>

@@ -3,22 +3,22 @@ from docplex.mp.model import Model
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import traci
+from scipy.interpolate import interp1d
 
 # Se importa el perfil de carga del edificio y la generación fotovoltaica
 profiles = pd.read_excel('data/data.xlsx')
 results = pd.DataFrame()
 
 # Se cambian los nombres a las columnas del dataframe para mayor legibilidad
-profiles.rename(columns = {'Fecha/Hora' : 'Timestamp', 'glb (W/m2)' : 'Irradiance', 'Carga (pu)' : 'Load'}, inplace = True)
+profiles.rename(columns={'Fecha/Hora': 'Timestamp', 'glb (W/m2)': 'Irradiance', 'Carga (pu)': 'Load'}, inplace=True)
 profiles['Load'] = profiles['Load'] * 80.00
 
 # Se crea el modelo de optimización a resolver
 mdl = Model("EV Charging Station")
 
 # Se definen las constantes como el precio de la energía eléctrica y el peso de la misma en el algoritmo de optimización
-Ce = 150 # [CLP/kWh]
-weight = 0 #0.001
+Ce = 150  # [CLP/kWh]
+weight = 0  # 0.001
 
 # Se define la potencia máxima que puede entregar la estación de carga y la potencia máxima que puede entregar cada punto de carga
 Pmax = 80.0
@@ -55,10 +55,10 @@ Pl = profiles['Load'].tolist()
 
 # Se ejecuta el algoritmo de optimización una vez cada hora
 for i in range(24):
-    Pch1       = mdl.continuous_var(name = "Pch1")
-    Pch2       = mdl.continuous_var(name = "Pch2")
-    Pch3       = mdl.continuous_var(name = "Pch3")
-    Pch4       = mdl.continuous_var(name = "Pch4")
+    Pch1 = mdl.continuous_var(name="Pch1")
+    Pch2 = mdl.continuous_var(name="Pch2")
+    Pch3 = mdl.continuous_var(name="Pch3")
+    Pch4 = mdl.continuous_var(name="Pch4")
     
     mdl.minimize(weight * Ce * (Pch1 + Pch2 + Pch3 + Pch4 + Pl[i]) \
         + (ev0_dep_time - i) * ev0_stay[i] * (ev_dem[0] - (Pch1 + ev_ch[0]))**2 \
@@ -79,18 +79,7 @@ for i in range(24):
     
     mdl.add_constraint(Pch1 + Pch2 + Pch3 + Pch4 + Pl[i] <= Pmax)
 
-
     sol = mdl.solve()
-    print("*******")
-    print("h =", i)
-    print("Pch1 =", sol[Pch1])
-    print("Pch2 =", sol[Pch2])
-    print("Pch3 =", sol[Pch3])
-    print("Pch4 =", sol[Pch4])
-    print("Pl =", Pl[i])
-    print("ev_ch =", ev_ch[3])
-    print("Pmax =", Pmax)
-    print("obj =", sol.objective_value)
 
     ev0.append(sol[Pch1])
     ev1.append(sol[Pch2])
@@ -101,7 +90,6 @@ for i in range(24):
     ev_ch[1] += sol[Pch2]
     ev_ch[2] += sol[Pch3]
     ev_ch[3] += sol[Pch4]
-
 
 # Se muestran los resultados del algoritmo de optimización para cada vehículo
 print(ev_dem)
@@ -116,19 +104,36 @@ for i in range(24):
     PcsPl.append(Pcs[i] + Pl[i])
     x.append(i)
 
-# Se grafican los resultados de simulación obtenidos para los vehículos eléctricos
-plt.title('Potencia de carga de los vehículos eléctricos')
-plt.axhline(y=22, color = 'r', linestyle = '--')
-plt.step(x, ev0)
-plt.step(x, ev1)
-plt.step(x, ev2)
-plt.step(x, ev3)
+# Interpolación con ruido gaussiano para los resultados de carga de vehículos eléctricos
+x_interp = np.arange(0, 24, 0.04)  # Nuevos puntos para la interpolación (cada 0.1 hora)
+f_ev0 = interp1d(x, ev0, kind='cubic', fill_value="extrapolate")
+f_ev1 = interp1d(x, ev1, kind='cubic', fill_value="extrapolate")
+f_ev2 = interp1d(x, ev2, kind='cubic', fill_value="extrapolate")
+f_ev3 = interp1d(x, ev3, kind='cubic', fill_value="extrapolate")
+
+ev0_interp = f_ev0(x_interp) + np.random.normal(0, 1, len(x_interp))
+ev1_interp = f_ev1(x_interp) + np.random.normal(0, 1, len(x_interp))
+ev2_interp = f_ev2(x_interp) + np.random.normal(0, 1, len(x_interp))
+ev3_interp = f_ev3(x_interp) + np.random.normal(0, 1, len(x_interp))
+
+# Gráficos con interpolación y ruido gaussiano
+plt.title('Potencia de carga de los vehículos eléctricos (Interpolación con ruido)')
+plt.axhline(y=22, color='r', linestyle='--')
+plt.plot(x_interp, ev0_interp, label='EV0')
+plt.plot(x_interp, ev1_interp, label='EV1')
+plt.plot(x_interp, ev2_interp, label='EV2')
+plt.plot(x_interp, ev3_interp, label='EV3')
+plt.legend()
 plt.show()
 
-# Se grafican los resultados obtenidos para la saturación del empalme
-plt.title('Potencia de la EC, del Edificio y del Empalme')
-plt.axhline(y=80, color = 'r', linestyle = '--')
-plt.step(x, PcsPl)
-plt.step(x, Pcs)
-plt.step(x, Pl)
+# Se obtiene la potencia de la estación de carga y de la combinación entre el edificio y la estación de carga
+
+load_interp = interp1d(x, Pl, kind='linear', fill_value="extrapolate")
+
+
+# Gráficos con interpolación y ruido gaussiano para la saturación del empalme
+load_interp = interp1d(x, Pl, kind='linear', fill_value="extrapolate")
+plt.plot(x_interp, load_interp(x_interp), label='Pl')
+
+plt.legend()
 plt.show()
