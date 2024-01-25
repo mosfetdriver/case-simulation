@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+import microgrid_elements
 
 # Se importa el perfil de carga del edificio y la generación fotovoltaica
 profiles = pd.read_excel('data/data.xlsx')
